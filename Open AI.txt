@@ -1,0 +1,94 @@
+Primeiro crio um projeto dentro do chat e adquiro uma key de uma api de dentro do openai
+
+crio uma pasta src/index.ts
+
+coloco essa API KEY dentro de um dotenv onde eu chamarei essa key no index.ts
+
+importanto o dotenv e apos instalação da biblioteca openai eu tbm faço a importação da mesma:
+
+import dotenv from "dotenv"
+import OpenAI from "openai"
+dotenv.config();
+
+const client = new OpenAI({
+    apiKey: process.env.OPEN_AI_SECRET_API_KEY
+})
+
+client.chat.completions.create({  --> retorna uma promisse ou seja conseguimos usar o .then((response) => {})
+    model: 'gpt-4o-mini',
+    max_completions_tokens: 100,
+    temperature: 0,
+    top_p: 0.1,
+    messages: [
+        {
+            role: "developer", --> mensagem do dev 
+            content: "User emogis a cada 2 palavras"
+        },
+        {
+            role: "user", --> mensagem do usuario
+            content: "Escreva uma mensagem de uma frase sobre unicornios"
+        },
+        {
+            role: "assistant", --> mensagem que o chat respondeu
+            content: "//mensagem digitada pelo chat"
+        },
+        {
+            role: "user", --> mensagem do usuario
+            content: "Obrigado"
+        },
+    ]
+}).then((completion // or response) => {
+    console.log(completion.choices[0].message.content)
+})
+
+console.log(completion.choices[0].message.content) --> retorna um array de choices que são varias respostas
+
+Parametros da API:
+    model: modelo de chat que quero usar
+    menssages: um array que possui varias mensagens onde cada mensagem vai tem o 
+        conteudo: content
+        role: quem esta enviando a mensagem temos 3: user, developer, assistant
+    max_completions_tokens: quantidade maxima de tokens da mensagem a enviar, bom para limitar gastos
+    temperature: nivel de determinismo/criativo quanto mais alto mais criativo de 0 a 2
+    top_p: O modelo prevê uma lista de palavras candidatas, cada uma com uma probabilidade
+
+Arrumando tudo:
+
+import dotenv from "dotenv"
+import OpenAI from "openai"
+dotenv.config();
+
+const client = new OpenAI({
+    apiKey: process.env.OPEN_AI_SECRET_API_KEY
+})
+
+function async generateText() {
+
+    const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_completions_tokens: 100,
+        messages: [
+            {
+                role: "developer", --> mensagem do dev 
+                content: "User emogis a cada 2 palavras"
+            },
+            {
+                role: "user",
+                content: "Escreva uma mensagem de uma frase sobre unicornios"
+            },
+            {
+                role: "assistant",
+                content: "//mensagem digitada pelo chat"
+            },
+            {
+                role: "user",
+                content: "Obrigado"
+            },
+        ]
+    })
+
+    console.log(completion.choices[0].message.content)
+
+}
+
+generateText()
