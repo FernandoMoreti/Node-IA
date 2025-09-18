@@ -266,3 +266,48 @@ Function Calling:
     oq é e porque é diferente de prompts tradicionais
     como definir funçoes para serem chamadas pela IA
 
+O que é??
+    O dev vai enviar um prompt com a definição das ferramentas que estão disponiveis/funções --> qual a temperatura em paris?? dentro dessas ferramentas vou procurar se tem uma função disponivel para que você busque a temp de algum lugar.
+    Viu que tem então ele chama essa função passando o parametro apropriado.
+    Essa função sera execuada e nos retornara um result que voltara para o modelo e o modelo gerara a resposta de fato para o user
+
+Ou seja: ela é usada para que possamos chamar funções pré  determinadas no nosso prompt 
+
+throw new Error("Refusal") --> é tipo um return que retorna um erro para o catch direto
+
+TOLLS: --> ferramentas ou funções
+
+tools: [
+    {
+        type: "function", --> faço a tipagem passando que é uma function
+        function: {
+            name: "produtosEmEstoque", --> Nome da função
+            description: "Lista produtos que estão em estoque", --> descrição da função
+            parameters: { --> passo os parametros da função, caso tenha
+                type: "object", --> do tipo objeto
+                properties: {}, --> aqui é onde eu passo os parametros
+                additionalProperties: false --> falo que não tem nenhuma propriedade adicional
+            },
+            strict: true,
+        }
+    },
+],
+
+tolls_calls:
+
+const { tool_calls } = completion.choices[0].message --> puxa a função que foi reconhecida pelo proprio chat
+if (tool_calls) {  --> se tem função
+    const [tool_call] = tool_calls  --> pego somente a primeira função
+    const toolsMap = { --> Faço o mapeamento de todas as funções 
+        produtosEmEstoque: produtosEmEstoque,
+        produtosSemEstoque: produtosSemEstoque,
+        produtosQuaseSemEstoque: produtosQuaseSemEstoque
+    }
+    const functionToCall = toolsMap[tool_call.function.name] --> Acho qual a função no map onde melhor se enquadra com o objeto toll_call definido la em cima no tools, onde tem uma function{ name: "", description: ""}
+    if (!functionToCall) { se não localizar retorna erro
+        throw new Error("Function not found")
+    }
+    const result = functionToCall() --> localizou então chama a função, nesse caso sem parametros
+    const result = functionToCall(toll_call.function.parsed_arguments) --> localizou então chama a função, nesse caso com parametros
+}
+
