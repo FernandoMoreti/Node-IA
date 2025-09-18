@@ -92,3 +92,177 @@ function async generateText() {
 }
 
 generateText()
+
+
+AI em um aplicação real:
+
+import express from 'express';
+import OpenAI from 'openai';
+import dotenv from "dotenv"
+dotenv.config();
+
+const app = express()
+
+const client = new OpenAI({
+    apiKey: process.env.OPEN_AI_SECRET_API_KEY
+})
+
+app.use(express.json())
+
+app.post("/generate", async (request, response) => {
+
+    const { content } = request.body
+    
+    try {
+
+        const completion = await client.chat.completions.create({
+            model: "gpt-4o-mini",
+            max_completion_tokens: 100,
+            messages: [
+                {
+                    role: "developer",
+                    content: "User emogis a cada 2 palavras"
+                },
+                {
+                    role: "user",
+                    content: content
+                },
+            ]
+        })
+    
+        response.json({ message: completion.choices[0].message.content})
+
+    } catch(error) {
+        response.json({ error: error })
+    }
+})
+
+
+export default app
+
+Aqui pegamos um valor enviado no body da aoplicação e mandamos direto para o nosso message no content do user para que atravez dessa messagepossamos retornar algo ao usuario como resposta com um prompt ja definido no developer
+
+
+Modulo 2 - Structured Outputs e function calling
+    Entender o que são saidas estrturadas e usar diferentes ferramentas da OPENAI para gerar saidas estruturadas
+
+Topicos:
+    o problema das resposta em texto puro
+    Json mode
+    Structured outputs
+
+1 - Estruturando dados de output:
+
+    Json Mode -> response_format: { type: "json_object" } --> a resposta vai vim como um json valido
+
+exemplo: 
+
+import { string } from './../node_modules/zod/src/v4/core/regexes';
+import express from 'express';
+import OpenAI from 'openai';
+import dotenv from "dotenv"
+dotenv.config();
+
+const app = express()
+
+const client = new OpenAI({
+    apiKey: process.env.OPEN_AI_SECRET_API_KEY
+})
+
+app.use(express.json())
+
+app.post("/generate", async (request, response) => {
+
+    const { content } = request.body
+    
+    try {
+
+        const completion = await client.chat.completions.create({
+            model: "gpt-4o-mini",
+            max_completion_tokens: 100,
+            response_format: { type: "json_object" }, --> quero a resposta no formato JSON_OBJECT
+            messages: [
+                {
+                    role: "developer",
+                    content: "Liste três produtos que atendam a necessidade do usuario. Responda em JSON no formato { produtos: stroing[] }"
+                },
+                {
+                    role: "user",
+                    content: content
+                },
+            ]
+        })
+
+        const output = JSON.parse(completion.choices[0].message.content ?? "") --> transformo a resposta que o chat me der em um json valido e armazeno no output
+        
+        response.json(output)
+
+    } catch(error) {
+        response.json({ error: error })
+    }
+})
+
+
+export default app
+
+Structured Output:
+    Alem de ser no formato em que pedimo JSON vira tambem na estrutura que pedi
+
+import express from 'express';
+import OpenAI from 'openai';
+import dotenv from "dotenv"
+dotenv.config();
+import { z } from "zod"
+import { zodResponseFormat } from 'openai/helpers/zod.mjs'; --> importo o zodResponseFormat para que possa fazer a a solicitação do formato que desejo receber a resposta
+
+
+const app = express()
+const client = new OpenAI({
+    apiKey: process.env.OPEN_AI_SECRET_API_KEY
+})
+app.use(express.json())
+
+const schema = z.object({ --> validar se o format que recebi é valido
+    produtos: z.array(z.string()) --> quero um objeto com um array de produtos
+})
+
+app.post("/generate", async (request, response) => {
+
+    const { content } = request.body
+    
+    try {
+
+        const completion = await client.chat.completions.parse({ --> altero o client
+            model: "gpt-4o-mini",
+            max_completion_tokens: 100,
+            response_format: zodResponseFormat(schema, "produtos_shema"), --> chamo essa validação --> passo sempre a validação e o nome
+            messages: [
+                {
+                    role: "developer",
+                    content: "Liste três produtos que atendam a necessidade do usuario. Responda em JSON no formato { produtos: stroing[] }"
+                },
+                {
+                    role: "user",
+                    content: content
+                },
+            ]
+        })
+
+        if (completion.choice[0].message.refusal) { --> caso ele não consiga responder ele cai aqui, por exemplo, passo uma lista de items e minha resposatra não consta nessa lista de resposta ele cai aqui
+            response.status(500).json({ refulsal: "refusal error" })
+        }
+
+        response.json(completion.choices[0].message.parsed?.produtos) --> ?. valida se o objeto é != null or undefined
+
+    } catch(error) {
+        response.json({ error: error })
+    }
+})
+
+
+export default app
+
+Function Calling:
+    oq é e porque é diferente de prompts tradicionais
+    como definir funçoes para serem chamadas pela IA
+
